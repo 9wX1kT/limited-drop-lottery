@@ -243,6 +243,7 @@ var ADMIN_KEY  = '68i-wuKeSSrYCkfhD9FisVZI';
 var isAdmin = (localStorage.getItem('isAdmin')==='1') || (location.search.indexOf('k='+ADMIN_KEY)>=0);
 var mode = (localStorage.getItem('mode') || 'user');
 if(!isAdmin) mode='user';
+var IMPMSG='';   /* 批量导入结果提示，跨渲染保留 */
 var page = '1';
 var app = document.getElementById('app');
 var nav = document.getElementById('nav');
@@ -450,8 +451,13 @@ function p2(){
     h+='<div><label>手机号（11 位）</label><input id="phone" placeholder="13900000001"></div>';
     h+='<div><label>设备 ID</label><input id="dev" value="'+devId()+'"></div></div>';
     h+='<button class="btn primary" id="rsv">录入一条预约</button> ';
-    h+='<button class="btn" id="bulk">批量灌入 80 条测试预约</button>';
-    h+='<div class="hint">去重维度：手机号 或 设备 ID 任一重复即拦截。也可以在 C 端界面由用户自助预约。</div><div id="m"></div>';
+    h+='<button class="btn" id="bulk">灌入 80 条演示数据</button> ';
+    h+='<button class="btn" id="clr">清空全部预约（保留配置）</button>';
+    h+='<div style="margin-top:14px"><label>批量导入真实名单（每行一条：<b>昵称,手机号</b>）</label>';
+    h+='<textarea id="impText" rows="5" style="width:100%;font-family:inherit;padding:8px" placeholder="小明,13900000001\n小红,13800000002"></textarea></div>';
+    h+='<button class="btn primary" id="imp" style="margin-top:8px">导入并自动去重</button>';
+    h+='<div class="hint">去重维度：手机号 或 设备 ID 任一重复即拦截。导入会自动为每条生成设备 ID，格式错误或重复的行会被跳过并列出。</div>';
+    h+='<div id="m"></div>'+(IMPMSG||'');
   }
   h+='</div><div class="card"><h2>预约名单（'+S.res.length+' 人）</h2><div class="scroll">';
   if(!S.res.length) h+='<div class="hint">暂无</div>';
@@ -530,8 +536,39 @@ function p5(){
   h+='</table></div>';
   h+='<h3>任何人都能复算（3 行）</h3><code>sha = s => sha256(s)\nids  = [完整有效预约编号列表]\nseed = "'+d.seed+'"\nrank = ids.sort((a,b) => sha(a+"|"+seed) < sha(b+"|"+seed) ? -1 : 1)\nwinners = rank.slice(0, '+d.stock+')</code>';
   h+='<div class="hint">把完整名单和种子代进去，得到的 winners 必然与公示一致。</div>';
-  h+='<div style="margin-top:12px"><button class="btn primary" id="verify">重算并比对</button><div id="vm"></div></div></div>';
-  return h;
+  h+='<div style="margin-top:12px"><button class="btn primary" id="verify">重算并比对</button><div id="vm"></div></div>';
+  h+='<div style="margin-top:16px;border-top:1px solid #eef0f4;padding-top:12px">';
+  h+='<button class="btn" id="exp">导出中签名单（文本）</button> ';
+  h+='<button class="btn" id="copy" style="display:none">复制</button>';
+  h+='<textarea id="expText" rows="10" readonly style="display:none;width:100%;margin-top:10px;font-family:inherit;font-size:12px;padding:8px"></textarea>';
+  h+='<div class="hint" style="margin-top:6px">导出的文本含<b>完整手机号</b>，用于私聊通知与转账。对外截图前务必打码。</div></div>';
+  return h+'</div>';
+}
+function exportText(){
+  var d=S.draw, a=S.act;
+  if(!d) return '还没开奖';
+  var L=[];
+  L.push('活动：'+a.name);
+  L.push('活动ID：'+a.id);
+  L.push('预约截止：'+fmt(a.end));
+  L.push('有效预约：'+d.validCount+' 人 ｜ 库存：'+d.stock+' ｜ 中签率：'+(d.winners.length/d.validCount*100).toFixed(1)+'%');
+  L.push('名单指纹：'+d.rosterHash);
+  L.push('种　　子：'+d.seed);
+  L.push('');
+  L.push('【中签名单 '+d.winners.length+' 人】排序｜编号｜昵称｜手机号｜兑换码');
+  d.winners.forEach(function(x,i){
+    var r=findRid(x)||{};
+    L.push((i+1)+'. '+x+'  '+(r.name||'-')+'  '+(r.phone||'')+'  '+(r.code||'待支付'));
+  });
+  var order={}; (d.rank||[]).forEach(function(x,i){ order[x]=i; });
+  var wait=S.res.filter(function(r){return r.status==='waiting';})
+                .sort(function(p,q){ return (order[p.rid]||1e9)-(order[q.rid]||1e9); });
+  L.push('');
+  L.push('【候补队列 '+wait.length+' 人】');
+  wait.forEach(function(r,i){ L.push((i+1)+'. '+r.rid+'  '+r.name+'  '+r.phone); });
+  L.push('');
+  L.push('注：含完整手机号，仅用于私聊通知与转账；对外截图前务必打码。');
+  return L.join('\n');
 }
 function p6(){
   var paid=S.res.filter(function(r){return r.status==='paid';}).length;
@@ -595,6 +632,33 @@ function bind(){
       ts:now(), status:'reserved', payDeadline:null });
     save(); render();
   };
+  if(g('clr')) g('clr').onclick=function(){
+    if(!confirm('清空全部 '+S.res.length+' 条预约？\n配置（库存 / salt / 截止时间）保持不变。')) return;
+    S.res=[]; S.draw=null; S.released=0; S.who='NEW'; S.act.demoSeed=false; IMPMSG=''; save(); render();
+  };
+  if(g('imp')) g('imp').onclick=function(){
+    var lines=(g('impText').value||'').split(/\r?\n/);
+    var ok=0, dup=0, bad=[];
+    lines.forEach(function(ln){
+      var s=ln.trim(); if(!s) return;
+      var toks=s.split(/[,，、\t|]+/).map(function(x){return x.trim();}).filter(Boolean);
+      var ph='';
+      toks.forEach(function(x){ if(/^\d{11}$/.test(x.replace(/\D/g,''))) ph=x.replace(/\D/g,''); });
+      if(!ph){ bad.push(s); return; }
+      var nick=(toks.filter(function(x){ return x.replace(/\D/g,'')!==ph; })[0]
+                || s.replace(/[\d\s]/g,'') || '匿名').slice(0,12);
+      if(S.res.some(function(r){ return r.phone===ph; })){ dup++; return; }
+      S.res.push({ rid:rid(), name:nick, phone:ph, device:'DEV-'+hex(8),
+                   ts:now(), status:'reserved', payDeadline:null });
+      ok++;
+    });
+    save();
+    var cls = ok ? 'ok' : 'warn';
+    var msg = '<div class="msg '+cls+'">导入成功 <b>'+ok+'</b> 条 ｜ 重复跳过 '+dup+' 条 ｜ 格式错误 '+bad.length+' 条';
+    if(bad.length) msg += '：'+bad.slice(0,3).join(' / ')+(bad.length>3?' …':'');
+    IMPMSG = msg + '</div>';
+    render();
+  };
   if(g('draw')) g('draw').onclick=function(){
     var valid=S.res.filter(function(r){return r.status==='reserved';}).map(byRid);
     var blob=sortedStr(valid);
@@ -610,6 +674,20 @@ function bind(){
     S.act.status='drawn'; save(); page='5'; render();
   };
   if(g('chk')) g('chk').onclick=function(){ releaseTimeout(); save(); render(); };
+  if(g('exp')) g('exp').onclick=function(){
+    var t=g('expText'), c=g('copy');
+    if(!t) return;
+    t.value=exportText(); t.style.display='block';
+    if(c) c.style.display='inline-block';
+  };
+  if(g('copy')) g('copy').onclick=function(){
+    var t=g('expText'); if(!t) return;
+    t.style.display='block'; t.focus(); t.select();
+    var done=false;
+    try{ done=document.execCommand('copy'); }catch(e){ done=false; }
+    if(!done && navigator.clipboard){ navigator.clipboard.writeText(t.value).then(function(){ alert('已复制到剪贴板'); }); return; }
+    alert(done ? '已复制到剪贴板' : '复制失败，请手动按 Ctrl+C');
+  };
   if(g('verify')) g('verify').onclick=function(){
     var r=recompute(S.draw.rank.slice().sort(), S.draw.seed, S.draw.stock);
     g('vm').innerHTML = JSON.stringify(r.winners)===JSON.stringify(S.draw.winners)
