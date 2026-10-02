@@ -142,15 +142,65 @@ function sha256(msg){
 }
 
 /* ================= 状态 ================= */
-var KEY='lottery_demo_v1';
+var KEY='lottery_demo_v2';
 function defaults(){
   return { act:{ id:'SALE-001', name:'星野系列 · 限量盲盒', stock:50, reserveHours:24,
                  payMin:15, salt:'SALT-2026-PUBLIC', start:null, end:null,
-                 status:'draft', demoFast:false },
+                 status:'draft', demoFast:false, showRate:true },
            res:[], draw:null, released:0, who:'NEW' };
 }
+/* ---- 合规公示数据（《盲盒经营行为规范指引（试行）》第九条：种类/样式/分布/投放量/抽取概率/价值范围） ---- */
+var STYLES=['夜航','潮汐','拾光','雾岛','归舟','白露','长夏','霜降','听风','拂晓','静默','远山'];
+var HIDDEN_NAME='星野 · 极光（隐藏款）', HIDDEN_PROB='1/144';
+var VALUE_RANGE='¥399 ~ ¥899';
+function styleList(){
+  return STYLES.map(function(s){ return { n:'星野 · '+s, p:'1/12' }; });
+}
+/* ---- 热度档位：C 端不暴露精确人数，避免观望效应与卡点涌入；后台仍看精确值 ---- */
+function heat(a,n){
+  if(!n) return { cnt:'尚无人预约', tag:'—', label:'预计中签率', val:'—' };
+  var cnt = n<10 ? '不足 10 人' : (Math.floor(n/10)*10)+'+ 人';
+  var tag = n<=a.stock ? '名额充足' : (a.stock/n>=0.8 ? '名额较充足' : (a.stock/n>=0.3 ? '较热门' : '极热门'));
+  if(n<=a.stock) return { cnt:cnt, tag:tag, label:'供需情况', val:'名额充足，预约即可参与' };
+  return { cnt:cnt, tag:tag, label:'预计中签率',
+           val: a.showRate ? (Math.min(1,a.stock/n)*100).toFixed(1)+'%' : '不公示（后台可开启）' };
+}
+/* 首次打开 / 重置后的默认态：预约开放中 + 预置示例预约，避免访客看到空页 */
+var DEMO_NICK=['星野鹿','鲸落','阿橘','小满','山雀','拿铁','布丁','青柠','晚风','汤圆',
+               '西瓜','可乐','柚子','木木','阿七','大熊','小柯','南栀','拾柒','咕咕'];
+var DEMO_HD=['138','139','137','136','135','159','188','186','150','177','199','132'];
+function hex(n){ var s=''; for(var i=0;i<n;i++) s+='0123456789abcdef'[Math.floor(Math.random()*16)]; return s; }
+function demoRes(n,start,span){
+  var out=[], t=now();
+  for(var i=0;i<n;i++){
+    var nick=DEMO_NICK[i%DEMO_NICK.length];
+    if(i>=DEMO_NICK.length) nick+='·'+(Math.floor(i/DEMO_NICK.length)+1);
+    var ph=DEMO_HD[i%DEMO_HD.length];
+    while(ph.length<11) ph+=Math.floor(Math.random()*10);
+    out.push({ rid:'RSV-DEMO'+('0000'+i).slice(-4),
+      name:nick, phone:ph.slice(0,11),
+      device:'DEV-'+hex(8),
+      ts:Math.round(start+Math.random()*span),
+      status:'reserved', payDeadline:null, demo:true });
+  }
+  return out.sort(function(a,b){ return a.ts-b.ts; });
+}
+function firstRun(){
+  var d=defaults(), t=now(), span=8*3600*1000;
+  d.act.start=t-span;
+  d.act.end=t+16*3600*1000;      /* 与 reserveHours=24 对齐：已开放 8h，剩余 16h */
+  d.act.status='open';
+  d.act.demoSeed=true;
+  d.res=demoRes(80,d.act.start,span);
+  return d;
+}
 var S = load();
-function load(){ try{ var v=localStorage.getItem(KEY); return v?JSON.parse(v):defaults(); }catch(e){ return defaults(); } }
+function load(){
+  var v;
+  try{ var raw=localStorage.getItem(KEY); v = raw?JSON.parse(raw):firstRun(); }catch(e){ v = firstRun(); }
+  if(v.act.showRate===undefined) v.act.showRate=true;   /* 兼容旧存档 */
+  return v;
+}
 function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
 function now(){ return Date.now(); }
 function payMs(){ return S.act.demoFast ? 60000 : S.act.payMin*60000; }
@@ -248,11 +298,14 @@ function cUser(){
   }
   else if(!me){
     var open = a.status==='open';
+    var h0 = heat(a, S.res.length);
     h+='<div class="pimg">商品主图</div><div class="ptitle">'+a.name+'</div>';
     h+='<div class="pprice">¥ 399 <span style="font-size:12px;color:#999;font-weight:400">限量 '+a.stock+' 件</span></div>';
     h+='<div class="pbox"><div class="pline"><span>预约截止</span><span>'+fmt(a.end)+'</span></div>';
-    h+='<div class="pline"><span>已预约人数</span><span>'+S.res.length+' 人</span></div>';
-    h+='<div class="pline"><span>预计中签率</span><span>'+(S.res.length? (Math.min(1,a.stock/S.res.length)*100).toFixed(1):'—')+'%</span></div></div>';
+    h+='<div class="pline"><span>已预约</span><span>'+h0.cnt+'</span></div>';
+    h+='<div class="pline"><span>预约热度</span><span'+(h0.tag==='极热门'?' style="color:#e8384f;font-weight:600"':'')+'>'+h0.tag+'</span></div>';
+    h+='<div class="pline"><span>'+h0.label+'</span><span>'+h0.val+'</span></div></div>';
+    h+=complianceBox(a);
     h+='<div class="pbox"><div style="font-size:13px;font-weight:600;margin-bottom:6px">抽选规则</div>';
     h+='<div class="rules">1. 预约需在截止时间前完成，每人限一次<br>'
       +'2. 手机号与设备号任一重复视为同一人<br>'
@@ -266,6 +319,7 @@ function cUser(){
       h+='<div><label>设备 ID</label><input id="cDev" value="'+devId()+'"></div></div>';
       h+='<button class="btn primary block" id="cRsv" style="margin-top:12px">立即预约</button>';
       h+='<div id="cm"></div>';
+      if(a.demoSeed) h+='<div class="hint" style="text-align:center;margin-top:10px">演示环境：已预置 80 条示例预约，数据仅保存在你自己的浏览器</div>';
     }else{
       h+='<button class="btn block" style="margin-top:16px" disabled>预约已截止</button>';
       h+='<div class="hint" style="text-align:center;margin-top:10px">本次抽选已结束，看看其他发售</div>';
@@ -326,6 +380,23 @@ function cUser(){
   return h;
 }
 function big(t,d){ return '<div class="big"><div class="t">'+t+'</div>'+(d?'<div class="d">'+d+'</div>':'')+'</div>'; }
+/* 合规公示模块：《盲盒经营行为规范指引（试行）》第九条要求公示的要素 */
+function complianceBox(a){
+  var g='';
+  styleList().forEach(function(s){ g+='<div>'+s.n+' <span style="color:#aaa">'+s.p+'</span></div>'; });
+  var h='<div class="pbox"><div style="font-size:13px;font-weight:600;margin-bottom:6px">款式与概率公示</div>';
+  h+='<div class="pline"><span>限量投放数量</span><span>'+a.stock+' 件</span></div>';
+  h+='<div class="pline"><span>商品价值范围</span><span>'+VALUE_RANGE+'</span></div>';
+  h+='<div class="pline"><span>隐藏款</span><span>'+HIDDEN_PROB+'</span></div>';
+  h+='<div style="font-size:12px;color:#888;margin:8px 0 4px">常规款 '+STYLES.length+' 款，单款抽取概率 1/'+STYLES.length+'</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:12px;color:#666">'+g+'</div>';
+  h+='<div class="rules" style="margin-top:8px">'
+    +'隐藏款为 '+HIDDEN_NAME+'，不占用常规款名额，本次无保底机制<br>'
+    +'以上为单件商品的抽取概率，同一款式实际出现数量存在随机差异<br>'
+    +'概率设定与抽取记录留存不少于 3 年，可追溯核验<br>'
+    +'本商品为盲盒：不向未满 8 周岁未成年人销售，8 周岁及以上需监护人同意</div>';
+  return h+'</div>';
+}
 function mmss(s){ var m=Math.floor(s/60), x=s%60; return (m<10?'0':'')+m+':'+(x<10?'0':'')+x; }
 
 function bindUser(){
@@ -361,6 +432,7 @@ function p1(){
   h+='<div style="flex:2"><label>公开盐值 salt（发售公告里提前公布）</label><input id="salt" value="'+a.salt+'"></div>';
   h+='</div>';
   h+='<label style="margin-top:8px"><input type="checkbox" id="demo" style="width:auto;margin-right:6px"'+(a.demoFast?' checked':'')+'>演示模式：支付窗口缩为 60 秒</label>';
+  h+='<label style="margin-top:6px"><input type="checkbox" id="showrate" style="width:auto;margin-right:6px"'+(a.showRate?' checked':'')+'>C 端公示「预计中签率」（头部 IP 严重供不应求时可关闭，只留热度档位）</label>';
   h+='<div style="margin-top:14px"><button class="btn primary" id="saveCfg">保存并开启预约</button> ';
   h+='<button class="btn" id="stopRsv">立即截止预约</button> ';
   h+='<button class="btn" id="loadDemo">一键演示到开奖</button> ';
@@ -486,11 +558,12 @@ function bind(){
     S.act.payMin=parseInt(g('paymin').value)||15;
     S.act.salt=g('salt').value;
     S.act.demoFast=g('demo').checked;
+    S.act.showRate=g('showrate').checked;
     S.act.start=now(); S.act.end=now()+S.act.reserveHours*3600000; S.act.status='open';
     save(); render();
   };
   if(g('stopRsv')) g('stopRsv').onclick=function(){ if(S.act.status==='open'){ S.act.status='closed'; S.act.end=now(); save(); render(); } };
-  if(g('reset')) g('reset').onclick=function(){ if(confirm('清空全部数据？')){ S=defaults(); save(); page='1'; render(); } };
+  if(g('reset')) g('reset').onclick=function(){ if(confirm('清空全部数据，回到初始演示态？')){ S=firstRun(); save(); page='1'; render(); } };
   if(g('rsv')) g('rsv').onclick=function(){
     var m=g('m'), phone=g('phone').value.trim(), dev=g('dev').value.trim(), nick=g('nick').value.trim();
     if(!/^\d{11}$/.test(phone)){ m.innerHTML='<div class="msg err">手机号必须是 11 位数字</div>'; return; }
