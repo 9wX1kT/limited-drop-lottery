@@ -378,7 +378,16 @@ function cUser(){
   }
   h+='</div></div>';
   h+='<div style="text-align:center;margin-top:14px"><span id="adminLink" style="font-size:11px;color:#c9ccd3;cursor:pointer">管理入口</span></div>';
+  h+=sibLinks();
   return h;
+}
+/* 姊妹篇导航：三种分配机制互链，放在 C 端最底部 */
+function sibLinks(){
+  return '<div style="text-align:center;margin-top:8px;font-size:11px;color:#b8bcc6;line-height:1.9">'
+   + '<a href="index.html" style="color:#b8bcc6;text-decoration:none">预约抽选</a>'
+   + ' · <a href="instant-lottery.html" style="color:#b8bcc6;text-decoration:none">即时抽奖</a>'
+   + ' · <a href="blind-box.html" style="color:#b8bcc6;text-decoration:none">盲盒发售</a>'
+   + '<br><span style="color:#c9ccd3">index.html v1.0 · 单文件零依赖 Demo · 数据仅存本地浏览器</span></div>';
 }
 function big(t,d){ return '<div class="big"><div class="t">'+t+'</div>'+(d?'<div class="d">'+d+'</div>':'')+'</div>'; }
 /* 合规公示模块：《盲盒经营行为规范指引（试行）》第九条要求公示的要素 */

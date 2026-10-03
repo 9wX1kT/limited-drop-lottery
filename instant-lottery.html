@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>即时抽奖 · 库存约束下的概率设计</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f6f6f4;color:#222;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}
+.wrap{max-width:840px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:#666;font-size:13px;margin:0 0 18px}
+section{background:#fff;border:1px solid #e6e4de;border-radius:12px;padding:16px;margin-bottom:16px}
+h2{font-size:15px;margin:0 0 4px}
+h2 .tag{font-size:11px;font-weight:400;color:#999;margin-left:6px}
+.desc{font-size:12.5px;color:#777;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:12px;color:#666}
+input,select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid #d5d3cc;border-radius:6px;background:#fff;color:#222}
+input[type=number]{width:88px}
+button{font:inherit;font-size:13px;padding:8px 14px;border-radius:8px;border:1px solid #222;background:#222;color:#fff;cursor:pointer}
+button.gh{background:#fff;color:#222}
+.kpi{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px}
+.kpi div{flex:1;min-width:112px;background:#faf9f6;border:1px solid #eee;border-radius:8px;padding:8px 10px}
+.kpi .n{font-size:18px;font-weight:600}
+.kpi .l{font-size:11px;color:#777}
+.bad{color:#b3261e}
+.good{color:#1a6b3c}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{border-bottom:1px solid #eee;padding:7px 8px;text-align:left;vertical-align:top}
+th{background:#faf9f6;color:#555;font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.log{font-size:12px;color:#555;margin-top:8px}
+.log span{display:inline-block;margin-right:12px}
+.msg{font-size:12.5px;padding:8px 10px;border-radius:6px;margin-top:10px}
+.warn{background:#fff6e5;color:#7a4b00}
+.info{background:#eef4fb;color:#12456e}
+.hint{font-size:11.5px;color:#888;margin-top:6px}
+ul{margin:8px 0 0;padding-left:18px;font-size:13px}
+li{margin-bottom:5px}
+footer{font-size:12px;color:#777}
+a{color:#1460a8}
+.code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#f4f3ef;padding:1px 5px;border-radius:4px}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:#f0efea;color:#666;margin-left:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>即时抽奖 · 库存约束下的概率设计</h1>
+<p class="sub">限量发售的第三种分配机制。与「预约抽选」并列，用于对照：点一下就出结果，代价是什么。</p>
+
+<section>
+<h2>一、抽一次看看<span class="tag">可玩</span></h2>
+<p class="desc">切换三种抽样方式，看同一个"1/10 概率"在库存有限时分别会发生什么。</p>
+<div class="row">
+  <div class="f"><label>抽样方式</label>
+    <select id="mode">
+      <option value="ind">① 独立概率（真随机，无视库存）</option>
+      <option value="cut">② 库存耗尽即下线</option>
+      <option value="pre">③ 中奖名额预分配</option>
+    </select>
+  </div>
+  <div class="f"><label>库存（件）</label><input type="number" id="stock" value="50" min="1"></div>
+  <div class="f"><label>公示概率</label>
+    <select id="pn">
+      <option value="10">1 / 10</option>
+      <option value="12">1 / 12</option>
+      <option value="20">1 / 20</option>
+      <option value="50">1 / 50</option>
+    </select>
+  </div>
+  <div class="f"><label>预计参与（人次）</label><input type="number" id="n" value="500" min="10"></div>
+  <div class="f"><label>保底（连 N 次未中必中）</label>
+    <select id="pity">
+      <option value="0">关闭</option>
+      <option value="5">5 次</option>
+      <option value="10">10 次</option>
+      <option value="20">20 次</option>
+    </select>
+  </div>
+</div>
+<div class="row">
+  <button id="go">抽一次</button>
+  <button id="go10" class="gh">连抽 10 次</button>
+  <button id="rst" class="gh">重置</button>
+</div>
+<div id="kpi"></div>
+<div id="log" class="log"></div>
+<div id="tip"></div>
+</section>
+
+<section>
+<h2>二、跑 1000 场，看真实后果<span class="tag">蒙特卡洛</span></h2>
+<p class="desc">参数沿用上方设置。每种方式各模拟 1000 场，统计超卖与剩货。</p>
+<div class="row">
+  <button id="run">开始模拟</button>
+  <span class="hint" id="stat"></span>
+</div>
+<div id="simout"></div>
+</section>
+
+<section>
+<h2>三、与「预约抽选」的对照<span class="tag">静态</span></h2>
+<table>
+<tr><th style="width:22%">维度</th><th style="width:39%">即时抽奖</th><th style="width:39%">预约抽选</th></tr>
+<tr><td>公平性的定义</td><td>每人<b>概率</b>相同（名义上）</td><td>每人<b>机会</b>相同（实际上）</td></tr>
+<tr><td>超卖</td><td>独立概率下必然存在超卖概率</td><td>0，名单锁定后统一开奖</td></tr>
+<tr><td>库存利用率</td><td>剩货与超卖二选一，不可兼得</td><td>100%，不多发不少发</td></tr>
+<tr><td>黄牛抵抗</td><td>几乎为零，可批量点击</td><td>可控，去重维度可扩展（手机号 / 设备 / 实名）</td></tr>
+<tr><td>用户心理</td><td>即时反馈，爽，成瘾性强，适合拉活</td><td>延迟满足，等 24 小时，参与感弱但信任强</td></tr>
+<tr><td>合规重点</td><td>公示抽取概率、限量投放数量、价值范围</td><td>同上，另需公示抽取规则与开奖时间</td></tr>
+<tr><td>适用场景</td><td>库存充足，目标是停留时长与活跃</td><td>库存稀缺，目标是公平与口碑</td></tr>
+</table>
+<p class="hint">一句话：即时抽奖是<b> Engagement 工具</b>，预约抽选是<b>分配机制</b>。混淆两者是限量发售最常见的翻车点。</p>
+</section>
+
+<section>
+<h2>四、三条决策记录</h2>
+<ul>
+<li><b>带保底就必须放弃独立事件。</b>真独立的话，连抽 100 次也可能一次不中——"连抽 10 次必中"这条承诺在数学上与独立事件直接矛盾。所以凡是带保底的即时抽奖，底层一定已经是预分配或条件概率，只是没有写在公示里。</li>
+<li><b>库存有限时，公示的"抽取概率"只能是名义概率。</b>真实中奖率 = 实际中奖数 / 实际参与数，它取决于来了多少人。这是《盲盒经营行为规范指引》第九条要求公示"抽取概率"时，规则与数学之间的一处真实张力——我的处理是：名义概率照常公示，同时在页面上区分"抽取概率"与"预计中签率"两类数字，不做混用。</li>
+<li><b>稀缺发售我用抽选，不用即时抽奖。</b>库存 50、来 5000 人时，即时抽奖要么让 4950 人在尾部连续扑空、要么超卖；两种结局都会伤害信任。抽选把"谁抢到"改成"谁有权参与"，把技术对抗问题转成了规则设计问题。</li>
+</ul>
+</section>
+
+<section>
+<h2>五、合规与技术边界</h2>
+<p class="desc">依据《盲盒经营行为规范指引（试行）》（国市监稽发〔2023〕39 号）</p>
+<ul>
+<li>第九条：公示商品种类 / 样式、抽取规则、商品分布、<b>限量投放数量</b>、<b>抽取概率</b>、商品价值范围</li>
+<li>第十条：概率设定与抽取记录留存不少于 3 年</li>
+<li>第二十三条：不向未满 8 周岁未成年人销售；8 周岁以上需监护人同意</li>
+</ul>
+<div class="msg warn"><b>技术边界（诚实声明）：</b>本页为纯前端单文件实现，随机数来自 <span class="code">Math.random()</span>，不具备密码学强度，不能用于真实发售的开奖。
+真实的即时抽奖必须由服务端完成三件事：全局库存计数（防止并发超卖）、按账号维度的抽次限制、以及可审计的随机源。
+本页的价值在于<b>把机制差异摆到台面上</b>，不在于提供可用实现。</div>
+</section>
+
+<footer>
+<p>同一套「稀缺商品分配机制」下的三种实现，可对照着看：<br>
+<a href="index.html">预约抽选</a>（承诺式种子 + 按序补位）·
+<a href="blind-box.html">盲盒发售</a>（先付后抽 + 图鉴留存）</p>
+<p>index.html v1.0 · instant-lottery.html v1.0 · blind-box.html v1.2 · 单文件零依赖 Demo · 数据仅存本地浏览器</p>
+</footer>
+
+</div>
+
+<script>
+var S={mode:'ind',stock:50,pn:10,n:500,pity:0,clicks:0,wins:0,miss:0,log:[],pre:null};
+var LAST='';
+
+function g(id){ return document.getElementById(id); }
+function num(id,d){ var v=parseInt(g(id).value,10); return (isNaN(v)||v<=0)?d:v; }
+
+function buildPre(stock,n){
+  var a=[],i,j,t,k=Math.min(stock,n);
+  for(i=1;i<=n;i++) a.push(i);
+  for(i=0;i<k;i++){ j=i+Math.floor(Math.random()*(a.length-i)); t=a[i]; a[i]=a[j]; a[j]=t; }
+  var set={};
+  for(i=0;i<k;i++) set[a[i]]=1;
+  return set;
+}
+
+function reset(){
+  S.clicks=0; S.wins=0; S.miss=0; S.log=[];
+  S.pre = (S.mode==='pre') ? buildPre(S.stock,S.n) : null;
+  render();
+}
+
+function oneDraw(){
+  var win=false, forced=false;
+  S.clicks++;
+  if(S.mode==='pre' && S.clicks>S.n){ S.log.unshift({k:S.clicks,win:false,off:true}); S.miss++; trim(); return; }
+  if(S.mode==='ind' && S.pity>0 && S.miss>=S.pity-1){ win=true; forced=true; }
+  else if(S.mode==='ind'){ win = Math.random()*S.pn < 1; }
+  else if(S.mode==='cut'){ win = (S.wins<S.stock) && (Math.random()*S.pn < 1); }
+  else { win = !!(S.pre && S.pre[S.clicks]); }
+  if(win){ S.wins++; S.miss=0; } else { S.miss++; }
+  S.log.unshift({k:S.clicks,win:win,forced:forced});
+  trim();
+}
+function trim(){ if(S.log.length>10) S.log.pop(); }
+
+function over(){
+  if(S.mode!=='ind') return 0;
+  return Math.max(0, S.wins-S.stock);
+}
+
+function render(){
+  var left=S.stock-S.wins, ov=over();
+  var h='';
+  h+='<div class="kpi">';
+  h+='<div><div class="n">'+S.clicks+'</div><div class="l">已抽次数</div></div>';
+  h+='<div><div class="n">'+S.wins+'</div><div class="l">中奖数</div></div>';
+  h+='<div><div class="n '+(left<0?'bad':'')+'">'+(left<0?'超卖 '+(-left):left)+'</div><div class="l">'+(left<0?'件':'剩余库存')+'</div></div>';
+  h+='<div><div class="n">'+(S.clicks?(S.wins/S.clicks*100).toFixed(1):'0.0')+'%</div><div class="l">实际中奖率</div></div>';
+  h+='<div><div class="n '+(ov>0?'bad':'')+'">'+ov+'</div><div class="l">超卖件数</div></div>';
+  h+='</div>';
+  g('kpi').innerHTML=h;
+
+  var l='';
+  for(var i=0;i<S.log.length;i++){
+    var x=S.log[i];
+    var t=x.off?'名额已发完':(x.win?(x.forced?'中（保底触发）':'中'):'未中');
+    var c=x.win?'good':'';
+    l+='<span class="'+c+'">#'+x.k+' '+t+'</span>';
+  }
+  g('log').innerHTML = l ? ('<b>最近结果：</b>'+l) : '';
+
+  var tip='';
+  if(S.mode==='ind'){
+    tip='<div class="msg warn">方式①：每次点击都是独立事件，库存只是个数字，抽超了也会继续发。靠它做限量发售，超卖是<b>概率问题不是 bug</b>。</div>';
+  }else if(S.mode==='cut'){
+    tip='<div class="msg info">方式②：库存发完立刻停。超卖为 0，但<b>失败全部堆在尾部</b>——越晚来的人越不可能中，先到先得的味道又回来了。</div>';
+  }else{
+    tip='<div class="msg info">方式③：把 '+Math.min(S.stock,S.n)+' 个中奖名额提前撒进 '+S.n+' 次点击的序列里。超卖 0、剩货 0，但<b>它已经不是独立事件</b>——第 k 次中不中，取决于前面中了多少。</div>';
+  }
+  if(S.pity>0){
+    tip+='<div class="msg warn">保底已开启（连 '+S.pity+' 次未中必中）：这条承诺与"独立概率"在数学上直接冲突，开启后名义概率已不成立，仅对方式①生效。</div>';
+  }
+  g('tip').innerHTML=tip;
+}
+
+function simulate(mode,stock,pn,n,rounds){
+  var p=1/pn, r, c, w, i, j, t, k, a, pre;
+  var overCnt=0, overSum=0, leftSum=0, winSum=0, blankSum=0;
+  for(r=0;r<rounds;r++){
+    pre=null;
+    if(mode==='pre'){
+      a=[]; for(i=1;i<=n;i++) a.push(i);
+      k=Math.min(stock,n);
+      for(i=0;i<k;i++){ j=i+Math.floor(Math.random()*(a.length-i)); t=a[i]; a[i]=a[j]; a[j]=t; }
+      pre={}; for(i=0;i<k;i++) pre[a[i]]=1;
+    }
+    w=0; var stopAt=n;
+    for(c=1;c<=n;c++){
+      var hit=false;
+      if(mode==='ind'){ hit = Math.random()<p; }
+      else if(mode==='cut'){ hit = (w<stock) && (Math.random()<p); }
+      else { hit = !!pre[c]; }
+      if(hit){ w++; if(mode==='cut' && w>=stock){ stopAt=c; break; } }
+    }
+    winSum += w;
+    var ov=Math.max(0,w-stock);
+    if(ov>0){ overCnt++; overSum+=ov; }
+    leftSum += Math.max(0,stock-w);
+    if(mode==='cut') blankSum += Math.max(0,n-stopAt)/n;
+  }
+  return {
+    overRate: overCnt/rounds,
+    overAvg: overCnt? overSum/overCnt : 0,
+    left: leftSum/rounds,
+    rate: winSum/rounds/n,
+    blank: blankSum/rounds
+  };
+}
+
+function runSim(){
+  var stock=num('stock',50), pn=parseInt(g('pn').value,10), n=num('n',500), rounds=1000;
+  var t0=Date.now();
+  var A=simulate('ind',stock,pn,n,rounds);
+  var B=simulate('cut',stock,pn,n,rounds);
+  var C=simulate('pre',stock,pn,n,rounds);
+  var ms=Date.now()-t0;
+  g('stat').innerHTML='库存 '+stock+' ｜ 名义概率 1/'+pn+' ｜ 每场 '+n+' 人次 ｜ '+rounds+' 场 ｜ 耗时 '+ms+' ms';
+
+  function row(name,x,note){
+    var cls = x.overRate>0.2 ? 'bad' : (x.overRate>0 ? '' : 'good');
+    return '<tr><td>'+name+'</td>'
+      +'<td class="num '+cls+'">'+(x.overRate*100).toFixed(1)+'%</td>'
+      +'<td class="num">'+(x.overRate>0?x.overAvg.toFixed(1):'—')+'</td>'
+      +'<td class="num">'+x.left.toFixed(1)+'</td>'
+      +'<td class="num">'+(x.rate*100).toFixed(2)+'%</td>'
+      +'<td class="num">'+(x.blank>0?(x.blank*100).toFixed(1)+'%':'—')+'</td>'
+      +'<td>'+note+'</td></tr>';
+  }
+  var h='<table><tr><th style="width:20%">抽样方式</th><th class="num">超卖场次占比</th><th class="num">平均超卖</th>'
+       +'<th class="num">平均剩货</th><th class="num">实际中奖率</th><th class="num">尾部扑空率</th><th>代价</th></tr>';
+  h+=row('① 独立概率',A,'卖不完 与 超卖 二选一');
+  h+=row('② 耗尽即下线',B,'失败集中在尾部，先到先得');
+  h+=row('③ 名额预分配',C,'需预知参与量；概率不独立');
+  h+='</table>';
+  h+='<div class="msg info"><b>怎么看这张表：</b>期望中奖数 = '+n+' ÷ '+pn+' = <b>'+(n/pn).toFixed(1)+'</b> 件，而库存是 <b>'+stock+'</b> 件。'
+    + (Math.abs(n/pn-stock)<1 ? '两者几乎相等——即便如此，方式①仍有约一半的场次超卖，因为分布是对称的。' : '两者并不相等，差距本身就决定了超卖或剩货的必然方向。')
+    + '把名义概率调得更小可以压低超卖率，代价是平均剩货上升。</div>';
+  g('simout').innerHTML=h;
+}
+
+function sync(){
+  S.mode=g('mode').value;
+  S.stock=num('stock',50);
+  S.pn=parseInt(g('pn').value,10);
+  S.n=num('n',500);
+  S.pity=parseInt(g('pity').value,10);
+  reset();
+}
+
+g('mode').onchange=sync;
+g('stock').onchange=sync;
+g('pn').onchange=sync;
+g('n').onchange=sync;
+g('pity').onchange=sync;
+g('go').onclick=function(){ oneDraw(); render(); };
+g('go10').onclick=function(){ for(var i=0;i<10;i++) oneDraw(); render(); };
+g('rst').onclick=function(){ sync(); };
+g('run').onclick=runSim;
+
+sync();
+</script>
+</body>
+</html>

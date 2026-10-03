@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>星野系列 · 盲盒系统 · Demo</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+         background:#f6f7f9; color:#222; font-size:14px; line-height:1.6; }
+  .wrap { max-width:1000px; margin:0 auto; padding:20px 20px 60px; }
+  h1 { font-size:20px; font-weight:600; margin:0 0 4px; }
+  .sub { color:#777; font-size:13px; margin-bottom:16px; }
+  .modes { display:flex; gap:8px; margin-bottom:16px; }
+  .modes button { padding:9px 20px; border:1px solid #d8dadd; background:#fff; border-radius:10px;
+                  cursor:pointer; font-size:14px; color:#333; }
+  .modes button.on { background:#222; color:#fff; border-color:#222; }
+  nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+  nav button { padding:7px 14px; border:1px solid #d8dadd; background:#fff; border-radius:8px;
+               cursor:pointer; font-size:13px; color:#333; }
+  nav button.on { background:#c2410c; color:#fff; border-color:#c2410c; }
+  .card { background:#fff; border:1px solid #e4e6ea; border-radius:12px; padding:20px 22px; margin-bottom:16px; }
+  h2 { font-size:15px; font-weight:600; margin:0 0 14px; }
+  h3 { font-size:13px; font-weight:600; margin:18px 0 8px; color:#444; }
+  label { display:block; font-size:12px; color:#666; margin-bottom:4px; }
+  input, select { width:100%; padding:8px 10px; border:1px solid #d8dadd; border-radius:8px;
+                  font-size:13px; background:#fff; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:150px; margin-bottom:10px; }
+  .btn { padding:9px 18px; border:1px solid #d8dadd; background:#fff; border-radius:8px;
+         cursor:pointer; font-size:13px; }
+  .btn.primary { background:#c2410c; color:#fff; border-color:#c2410c; }
+  .btn.sm { padding:5px 12px; font-size:12px; }
+  .btn.block { width:100%; padding:13px; font-size:15px; border-radius:12px; }
+  .btn.danger { color:#a03030; border-color:#f0c4c6; }
+  code { display:block; background:#f2f4f7; border:1px solid #e4e6ea; border-radius:8px;
+         padding:12px; font-family:ui-monospace,Consolas,monospace; font-size:12px;
+         word-break:break-all; white-space:pre-wrap; margin:6px 0; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid #eceef1; }
+  th { color:#777; font-weight:500; font-size:12px; }
+  .msg { padding:10px 14px; border-radius:8px; font-size:13px; margin:10px 0; }
+  .ok { background:#e8f5ee; color:#1a6b45; border:1px solid #b8e0c8; }
+  .warn { background:#fff6e6; color:#8a5a00; border:1px solid #f0dcb0; }
+  .err { background:#fdeced; color:#a03030; border:1px solid #f3c5c7; }
+  .hint { color:#888; font-size:12px; margin:4px 0 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
+  .metric { background:#f6f7f9; border-radius:10px; padding:14px; text-align:center; }
+  .metric .n { font-size:24px; font-weight:600; }
+  .metric .l { font-size:12px; color:#777; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:12px; background:#eef1f5; color:#555; }
+  .pill.ok { background:#e8f5ee; color:#1a6b45; }
+  .pill.wait { background:#fff6e6; color:#8a5a00; }
+  .pill.hid { background:#f3e8ff; color:#6b21a8; }
+  .scroll { max-height:400px; overflow:auto; }
+  .foot { margin-top:26px; padding-top:14px; border-top:1px solid #e4e6ea;
+          color:#999; font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+
+  /* C 端手机框 */
+  .phone { width:375px; margin:0 auto; background:#fff; border:1px solid #dcdfe4;
+           border-radius:26px; overflow:hidden; }
+  .phone .bar { background:#111; color:#fff; padding:9px 16px; font-size:12px;
+                display:flex; justify-content:space-between; }
+  .phone .nb { background:#fff; border-bottom:1px solid #eee; padding:11px 16px;
+               font-size:14px; font-weight:600; text-align:center; }
+  .phone .body { padding:14px 16px 22px; min-height:520px; background:#f7f8fa; }
+  .ptitle { font-size:17px; font-weight:600; margin:12px 0 4px; }
+  .pprice { color:#c2410c; font-size:19px; font-weight:600; }
+  .pbox { background:#fff; border-radius:12px; padding:12px 14px; margin-top:12px; border:1px solid #eee; }
+  .pline { display:flex; justify-content:space-between; font-size:13px; padding:6px 0; color:#555; }
+  .cd { font-size:30px; font-weight:600; letter-spacing:1px; text-align:center; margin:16px 0; }
+  .cd small { font-size:12px; font-weight:400; color:#888; display:block; letter-spacing:0; }
+
+  /* 款式墙 */
+  .wall { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+  .tile { border-radius:10px; padding:12px 6px; text-align:center; font-size:12px; color:#fff;
+          position:relative; min-height:56px; display:flex; align-items:center; justify-content:center; }
+  .tile.h { outline:2px dashed #c2410c; outline-offset:-2px; }
+  .tile.locked { filter:grayscale(1); opacity:.5; }
+  .tile .hn { position:absolute; top:4px; right:6px; font-size:10px; }
+
+  /* 盲盒 */
+  .boxgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+  .bx { border-radius:12px; padding:14px 4px; text-align:center; font-size:12px; cursor:pointer;
+        border:1px solid #e4e6ea; background:#fff; min-height:62px;
+        display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .bx .q { font-size:22px; line-height:1; }
+  .bx.done { border-color:#f0c4c6; }
+  .bx.open { animation:pop .45s ease-out; }
+  .bx .nm { font-size:12px; color:#333; margin-top:4px; }
+  .bx .btag { font-size:10px; color:#888; }
+  .bx .bdone { position:absolute; top:6px; left:8px; font-size:10px; color:#1a6b45; }
+  .bx.done { position:relative; background:#fff; }
+  @keyframes pop { 0% { transform:scale(.82) rotate(-4deg); opacity:.4; }
+                   60% { transform:scale(1.06) rotate(1.5deg); }
+                   100% { transform:scale(1) rotate(0); opacity:1; } }
+  @media (prefers-reduced-motion: reduce) { .bx.open { animation:none; } }
+
+  /* 数量步进器 */
+  .stepper { display:flex; align-items:center; gap:0; margin-top:6px;
+            border:1px solid #d8dadd; border-radius:10px; overflow:hidden; height:40px; }
+  .stbtn { width:44px; height:100%; border:none; background:#f7f8fa; font-size:19px;
+           color:#222; cursor:pointer; line-height:1; }
+  .stbtn:first-child { border-right:1px solid #e4e6ea; }
+  .stbtn:last-child { border-left:1px solid #e4e6ea; }
+  .stbtn:disabled { color:#c8ccd2; cursor:not-allowed; background:#fbfbfc; }
+  .stbtn:not(:disabled):active { background:#eceef1; }
+  .stnum { flex:1; text-align:center; display:flex; align-items:baseline;
+           justify-content:center; gap:4px; }
+  .stnum b { font-size:17px; font-weight:600; }
+  .stnum span { font-size:12px; color:#888; }
+  .btn.rule { margin-top:10px; font-size:12px; padding:6px 12px; color:#777;
+              border-color:#e8eaed; background:#fafbfc; width:auto; align-self:center; }
+  .btn.rule:hover { color:#c2410c; border-color:#e0c4b8; }
+
+  .big { text-align:center; padding:26px 0 10px; }
+  .big .t { font-size:30px; font-weight:600; }
+  .big .d { color:#888; font-size:13px; margin-top:6px; }
+  .rules { font-size:12px; color:#777; line-height:1.9; }
+  .rowbox { display:flex; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #f0f1f3; }
+  .rowbox .sp { flex:1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>星野系列 · 盲盒系统</h1>
+  <div class="sub">先付款后抽盒 · 12 常规 + 1 隐藏 · 款式概率公开可复算 · 与「限量抽选」为两套独立模型</div>
+
+  <div class="modes">
+    <button id="mUser">C 端 · 用户界面</button>
+    <button id="mAdmin">B 端 · 运营后台</button>
+  </div>
+
+  <nav id="nav"></nav>
+  <div id="app"></div>
+
+  <div class="foot">
+    <span>同一套「稀缺商品分配机制」下的三种实现，可对照着看</span>
+    <span><a href="index.html" style="color:#888">预约抽选</a> ·
+          <a href="instant-lottery.html" style="color:#888">即时抽奖</a> ·
+          <a href="blind-box.html" style="color:#888;color:#555">盲盒发售</a></span>
+    <span>blind-box.html v1.2 · 单文件零依赖 Demo · 数据仅存本地浏览器</span>
+  </div>
+</div>
+
+<script>
+/* ================= SHA-256（用于款式配置指纹，离线可用） ================= */
+var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+0x748f82ee,0x78a5636b,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function rotr(x,n){return ((x>>>n)|(x<<(32-n)))>>>0;}
+function sha256(msg){
+  var bytes=new TextEncoder().encode(msg), l=bytes.length;
+  var blocks=Math.ceil((l+9)/64), pad=new Uint8Array(blocks*64);
+  pad.set(bytes); pad[l]=0x80;
+  var bits=l*8, hi=Math.floor(bits/4294967296), lo=bits%4294967296;
+  pad[pad.length-8]=(hi>>>24)&255; pad[pad.length-7]=(hi>>>16)&255;
+  pad[pad.length-6]=(hi>>>8)&255;  pad[pad.length-5]=hi&255;
+  pad[pad.length-4]=(lo>>>24)&255; pad[pad.length-3]=(lo>>>16)&255;
+  pad[pad.length-2]=(lo>>>8)&255; pad[pad.length-1]=lo&255;
+  var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var w=new Uint32Array(64);
+  for(var b=0;b<blocks;b++){
+    var o=b*64, t;
+    for(t=0;t<16;t++) w[t]=((pad[o+t*4]<<24)|(pad[o+t*4+1]<<16)|(pad[o+t*4+2]<<8)|pad[o+t*4+3])>>>0;
+    for(t=16;t<64;t++){
+      var s0=rotr(w[t-15],7)^rotr(w[t-15],18)^(w[t-15]>>>3);
+      var s1=rotr(w[t-2],17)^rotr(w[t-2],19)^(w[t-2]>>>10);
+      w[t]=(w[t-16]+s0+w[t-7]+s1)>>>0;
+    }
+    var a=H[0],bb=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(t=0;t<64;t++){
+      var S1=rotr(e,6)^rotr(e,11)^rotr(e,25);
+      var ch=(e&f)^((~e)&g);
+      var t1=(h+S1+ch+K[t]+w[t])>>>0;
+      var S0=rotr(a,2)^rotr(a,13)^rotr(a,22);
+      var mj=(a&bb)^(a&c)^(bb&c);
+      var t2=(S0+mj)>>>0;
+      h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=bb;bb=a;a=(t1+t2)>>>0;
+    }
+    H[0]=(H[0]+a)>>>0;H[1]=(H[1]+bb)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
+    H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+  }
+  var out='';
+  for(var i=0;i<8;i++) out+=('0000000'+H[i].toString(16)).slice(-8);
+  return out;
+}
+
+/* ================= 状态 ================= */
+var KEY='blindbox_demo_v2';
+var STYLES=['夜航','潮汐','拾光','雾岛','归舟','白露','长夏','霜降','听风','拂晓','静默','远山'];
+var HUE=[212,196,28,258,16,340,44,174,262,96,318,190];
+
+function defaults(){
+  return {
+    cfg:{ id:'BB-2026-01', name:'星野系列', price:399, limitPerOrder:6,
+          hiddenDenom:144, dropQty:500, valueLow:399, valueHigh:899, status:'live' },
+    styles:null, orders:[], log:[]
+  };
+}
+function freshStyles(hiddenDenom){
+  var a=STYLES.map(function(s,i){
+    return { code:'N'+(i+1), name:'星野 · '+s, tier:'normal', weight:143, hue:HUE[i] };
+  });
+  a.push({ code:'H1', name:'星野 · 极光（隐藏款）', tier:'hidden', weight:12, hue:275 });
+  return a;
+}
+function firstRun(){
+  var d=defaults();
+  d.styles=freshStyles(d.cfg.hiddenDenom);
+  /* 预置 6 笔订单：3 笔已全开、1 笔部分开、1 笔未开、1 笔全部未开 */
+  d.orders=[
+    mkOrder(d,'2026-10-02T14:22:00',3,true),
+    mkOrder(d,'2026-10-02T18:05:00',2,true),
+    mkOrder(d,'2026-10-03T09:41:00',6,true),
+    mkOrder(d,'2026-10-03T10:12:00',4,false),
+    mkOrder(d,'2026-10-03T11:30:00',1,false),
+    mkOrder(d,'2026-10-03T13:58:00',5,false)
+  ];
+  return d;
+}
+var SEQ=0;
+function mkOrder(st,ts,qty,opened){
+  var d=new Date(ts);
+  var pad=function(n){ return n<10?'0'+n:''+n; };
+  var no='BB-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes());
+  var o={ no:no+(++SEQ), ts:new Date(ts).getTime(), qty:qty,
+          unitPrice:st.cfg.price, amount:st.cfg.price*qty,
+          status:'paid', slots:[] };
+  if(opened) openAll(st,o);
+  return o;
+}
+var S = load();
+function load(){
+  var v=null;
+  try{ v=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!v||!v.styles) return firstRun();
+  if(v.cfg.hiddenDenom===undefined) v.cfg.hiddenDenom=144;
+  return v;
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
+function now(){ return Date.now(); }
+function fmt(ms){ return new Date(ms).toLocaleString('zh-CN'); }
+function hex(n){ var s=''; for(var i=0;i<n;i++) s+='0123456789abcdef'[Math.floor(Math.random()*16)]; return s; }
+
+function totalWeight(st){
+  return st.styles.reduce(function(a,s){ return a+s.weight; },0);
+}
+function probOf(st,code){
+  var s=st.styles.filter(function(x){return x.code===code;})[0];
+  if(!s) return 0;
+  return s.weight/totalWeight(st);
+}
+/* 概率口径：隐藏款 1/N；常规款按"总量比 N-1 : 1"均分后的约数展示 */
+function tierLabel(st,s){
+  if(s.tier==='hidden') return '1/'+st.cfg.hiddenDenom;
+  return '约 1/'+Math.max(1,Math.round(st.cfg.hiddenDenom*1/12));
+}
+function pickOne(st){
+  var tot=totalWeight(st), r=Math.random()*tot, acc=0;
+  for(var i=0;i<st.styles.length;i++){
+    acc+=st.styles[i].weight;
+    if(r<acc) return st.styles[i];
+  }
+  return st.styles[st.styles.length-1];
+}
+function openAll(st,o){
+  ensureSlots(o);
+  for(var i=0;i<o.qty;i++) openSlot(st,o,i);
+}
+/* slots 槽位式：每个盒子独立记录，slots[i] 为 null 表示第 i 盒未开。
+   支持任意顺序开盒，已开结果不会被后续操作覆盖。 */
+function openSlot(st,o,i){
+  if(i<0 || i>=o.qty) return false;
+  if(!o.slots) o.slots=[];
+  if(o.slots[i]) return false;          /* 已开过，不覆盖 */
+  var s=pickOne(st);
+  o.slots[i]={ code:s.code, name:s.name, tier:s.tier, hue:s.hue,
+               p:+(probOf(st,s.code)*100).toFixed(3), ts:now() };
+  return true;
+}
+function openedCount(o){ return (o.slots||[]).filter(function(x){ return x; }).length; }
+function openedItems(o){ return (o.slots||[]).filter(function(x){ return x; }); }
+/* 兼容旧结构（预置数据用 push） */
+function ensureSlots(o){
+  if(!o.slots){ o.slots=[]; }
+  (o.items||[]).forEach(function(it){
+    var k=o.slots.indexOf(null);
+    if(k<0) o.slots.push(it); else o.slots[k]=it;
+  });
+  o.items=null;
+  return o.slots;
+}
+function collection(){
+  var m={};
+  S.orders.forEach(function(o){
+    openedItems(ensureSlots(o)).forEach(function(it){ m[it.code]=(m[it.code]||0)+1; });
+  });
+  return m;
+}
+function orderStatusTxt(o){
+  var n=openedCount(o);
+  if(n===0) return { t:'待开盒', c:'' };
+  if(n<o.qty) return { t:'部分开盒', c:'wait' };
+  return { t:'已开完', c:'ok' };
+}
+
+/* ================= 管理后台入口 ================= */
+var ADMIN_CODE='BB2026-OPEN', ADMIN_KEY='kk-9dQw8XbT2nLpV';
+var mode='user', pg='c1', adminOk=false;
+var FB='', EXPORT='';
+
+/* ================= 渲染 ================= */
+function render(){
+  document.getElementById('mUser').className = mode==='user'?'on':'';
+  document.getElementById('mAdmin').className = mode==='admin'?'on':'';
+  var navs = mode==='user'
+    ? [['c1','选品'],['c2','收银台'],['c3','开盒结果'],['c4','我的订单'],['c5','收藏图鉴'],['c6','玩法规则']]
+    : [['b1','数据总览'],['b2','订单管理'],['b3','款式管理']];
+  document.getElementById('nav').innerHTML = navs.map(function(n){
+    return '<button id="'+n[0]+'" class="'+(pg===n[0]?'on':'')+'">'+n[1]+'</button>';
+  }).join('');
+  navs.forEach(function(n){ document.getElementById(n[0]).onclick=function(){ pg=n[0]; FB=''; render(); }; });
+
+  var el=document.getElementById('app');
+  if(mode==='user'){
+    if(pg==='c1') el.innerHTML=c1();
+    else if(pg==='c2') el.innerHTML=c2();
+    else if(pg==='c3') el.innerHTML=c3();
+    else if(pg==='c4') el.innerHTML=c4();
+    else if(pg==='c5') el.innerHTML=c5();
+    else if(pg==='c6') el.innerHTML=c6();
+    bindUser();
+  }else{
+    if(!adminOk){ el.innerHTML=adminGate(); bindGate(); return; }
+    if(pg==='b1') el.innerHTML=b1();
+    else if(pg==='b2') el.innerHTML=b2();
+    else if(pg==='b3') el.innerHTML=b3();
+    bindAdmin();
+  }
+}
+
+/* ================= C 端 ================= */
+function c1(){
+  var cfg=S.cfg, col=collection();
+  var wall=S.styles.map(function(s){
+    var got=col[s.code];
+    var cls='tile'+(s.tier==='hidden'?' h':'')+(got?'':' locked');
+    return '<div class="'+cls+'" style="background:hsl('+s.hue+',42%,'+(got?'58':'42')+')">'
+         + (s.tier==='hidden'?'<span class="hn">隐藏</span>':'')
+         + '<div>'+s.name.replace('星野 · ','')+'</div>'
+         + '<div style="font-size:10px;opacity:.85">'+(got?('已得 '+got):'未收集')+'</div></div>';
+  }).join('');
+  return '<div class="phone"><div class="bar"><span>9:41</span><span>星野潮玩</span><span>●●●</span></div>'
+   + '<div class="nb">'+cfg.name+' · 盲盒</div>'
+   + '<div class="body">'
+   + '<div class="wall">'+wall+'</div>'
+   + '<div class="pbox">'
+   +   '<div class="pline"><span>单盒售价</span><span class="pprice">¥'+cfg.price+'</span></div>'
+   +   '<div class="pline"><span>本系列投放总量</span><span>'+cfg.dropQty+' 盒</span></div>'
+   +   '<div class="pline"><span>款式构成</span><span>12 常规 + 1 隐藏</span></div>'
+   +   '<div class="pline"><span>单次限购</span><span>'+cfg.limitPerOrder+' 盒</span></div>'
+   + '</div>'
+   + '<div class="pbox"><label>选购数量（本单最多 '+cfg.limitPerOrder+' 盒）</label>'
+   + '<div class="stepper" id="qtyRow">'
+   +   '<button class="stbtn" id="qMinus">−</button>'
+   +   '<div class="stnum"><b id="qNum">'+QTY()+'</b><span>盒</span></div>'
+   +   '<button class="stbtn" id="qPlus">＋</button>'
+   + '</div>'
+   + '<div class="hint" id="qHint">单笔最少 1 盒</div></div>'
+   + '<button id="goPay" class="btn primary block" style="margin-top:14px">立即购买（先付款后抽盒）· ¥'+(cfg.price*QTY())+'</button>'
+   + '<button id="goRule" class="btn rule sm">玩法规则与抽取概率</button>'
+   + '<p class="hint">付款后才开盒：本系统为「先付款后抽盒」模型，与限量发售抽选（先抽中签资格后付款）是两套独立机制。</p>'
+   + '<div style="text-align:center;margin-top:20px"><button id="adm" class="btn sm">运营后台入口</button></div>'
+   + '</div></div>';
+}
+function QTY(){ return parseInt(localStorage.getItem('bb_qty')||'1',10)||1; }
+function setQty(n){ localStorage.setItem('bb_qty',String(n)); }
+
+function c2(){
+  var cfg=S.cfg, q=QTY();
+  return '<div class="phone"><div class="bar"><span>9:41</span><span>确认订单</span><span>●●●</span></div>'
+   + '<div class="nb">确认订单</div><div class="body">'
+   + '<div class="pbox"><div class="pline"><span>商品</span><span>'+cfg.name+' 盲盒 × '+q+'</span></div>'
+   + '<div class="pline"><span>单价</span><span>¥'+cfg.price+'</span></div>'
+   + '<div class="pline"><span>配送</span><span>现货 · 付款即开盒</span></div>'
+   + '<div class="pline"><span>订单金额</span><span class="pprice">¥'+(cfg.price*q)+'</span></div></div>'
+   + '<div class="pbox rules"><b>付款须知</b><br>'
+   + '· 本商品为盲盒，付款后随机款式，<b>不支持指定款式</b>。<br>'
+   + '· 款式抽取概率见「玩法规则」，与本单数量无关，每盒独立抽取。<br>'
+   + '· 隐藏款为随机产出，不保证必出。<br>'
+   + '· 虚拟商品一经开出不支持退换。</div>'
+   + '<button id="pay" class="btn primary block" style="margin-top:14px">确认支付 ¥'+(cfg.price*q)+'</button>'
+   + '<button id="back" class="btn block" style="margin-top:8px">返回修改</button>'
+   + '</div></div>';
+}
+
+function c3(){
+  var o=lastOrder();
+  if(!o) return '<div class="phone"><div class="bar"><span>9:41</span><span>开盒结果</span><span>●●●</span></div>'
+   + '<div class="nb">开盒结果</div><div class="body"><div class="big"><div class="t">还没有订单</div>'
+   + '<div class="d">先在选品页下单付款</div></div>'
+   + '<button id="go1" class="btn primary block">去选品</button></div></div>';
+  var slots=ensureSlots(o), col=collection();
+  var grid=[], remain=0;
+  for(var i=0;i<o.qty;i++){
+    var it=slots[i];
+    if(it){
+      grid.push('<div class="bx done open" data-i="'+i+'">'
+        +'<div class="bdone">已开</div>'
+        +'<div class="q" style="color:hsl('+it.hue+',45%,52%)">◆</div>'
+        +'<div class="nm">'+it.name.replace('星野 · ','')+'</div>'
+        +'<div class="nm btag">'+it.p+'%'+(it.tier==='hidden'?' · 隐藏':'')+'</div></div>');
+    }else{
+      remain++;
+      grid.push('<div class="bx" data-i="'+i+'"><div class="q">🎁</div>'
+        +'<div class="nm">点我开第 '+(i+1)+' 盒</div></div>');
+    }
+  }
+  var allOpen=remain===0;
+  var got=openedItems(o);
+  var sum={};
+  got.forEach(function(it){ sum[it.name]=(sum[it.name]||0)+1; });
+  var sumTxt=Object.keys(sum).map(function(k){ return k.replace('星野 · ','')+'×'+sum[k]; }).join('、');
+  var hiddenGot=col['H1']||0;
+  return '<div class="phone"><div class="bar"><span>9:41</span><span>开盒结果</span><span>●●●</span></div>'
+   + '<div class="nb">开盒结果</div><div class="body">'
+   + '<div class="cd">'+o.no+'<small>'+fmt(o.ts)+' ｜ '+o.qty+' 盒 ｜ ¥'+o.amount+'</small></div>'
+   + (allOpen?'':'<p class="hint" style="text-align:center;margin:0 0 8px">已开 '+got.length+' / '+o.qty
+       +' ｜ 剩余 '+remain+' 盒可任意顺序开，点哪个开哪个</p>')
+   + '<div class="boxgrid">'+grid.join('')+'</div>'
+   + (allOpen?('<div class="pbox"><div class="pline"><span>本次开出</span><span>'+sumTxt+'</span></div>'
+        +(got.some(function(x){return x.tier==='hidden';})
+          ?'<div class="msg ok" style="margin-top:8px">本单开出隐藏款 · 星野 · 极光</div>'
+          :'')
+        +'</div>'):'')
+   + (hiddenGot?'<div class="pbox"><div class="pline"><span>收藏进度</span><span>已得 '+Object.keys(col).length+' / '+S.styles.length+' 款</span></div></div>':'')
+   + '<button id="go5" class="btn block" style="margin-top:12px">查看收藏图鉴</button>'
+   + '<button id="go4" class="btn block" style="margin-top:8px">我的订单</button>'
+   + '</div></div>';
+}
+function nextNo(){
+  var d=new Date(), p=function(n){ return n<10?'0'+n:''+n; };
+  S.seq=(S.seq||0)+1;
+  var seq=('000000'+S.seq).slice(-6);
+  return 'BB-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'
+       + p(d.getHours())+p(d.getMinutes())+p(d.getSeconds())+'-'+seq;
+}
+function lastOrder(){
+  if(!S.orders.length) return null;
+  return S.orders.slice().sort(function(a,b){ return b.ts-a.ts; })[0];
+}
+
+function c4(){
+  var rows=S.orders.slice().sort(function(a,b){ return b.ts-a.ts; }).map(function(o){
+    var st=orderStatusTxt(o), oc=openedCount(o);
+    var names=oc?openedItems(o).map(function(x){return x.name.replace('星野 · ','');}).join('、'):'—';
+    return '<tr><td><b>'+o.no+'</b><br><span class="hint">'+fmt(o.ts)+'</span></td>'
+      + '<td>'+o.qty+'</td><td>¥'+o.amount+'</td>'
+      + '<td><span class="pill '+st.c+'">'+st.t+'</span><br><span class="hint">'+oc+'/'+o.qty+'</span></td>'
+      + '<td style="max-width:180px"><span class="hint">'+names+'</span></td>'
+      + '<td>'+(oc<o.qty?'<button class="btn sm" data-open="'+o.no+'">继续开盒</button>':'—')+'</td></tr>';
+  }).join('');
+  return '<div class="card"><h2>我的订单</h2>'
+   + '<table><thead><tr><th>订单号 / 时间</th><th>数量</th><th>金额</th><th>状态</th><th>已开款式</th><th>操作</th></tr></thead>'
+   + '<tbody>'+rows+'</tbody></table>'
+   + '<p class="hint">订单号为支付成功后生成，格式 BB-年月日-时分秒-序号。款式为已开盒结果，未开盒部分不展示。</p></div>';
+}
+
+function c5(){
+  var col=collection(), got=Object.keys(col).length, total=S.styles.length;
+  var grid=S.styles.map(function(s){
+    var n=col[s.code]||0;
+    return '<div class="'+(n?'tile':'tile locked')+'" style="background:hsl('+s.hue+',42%,'+(n?'58':'88')+')">'
+      + (s.tier==='hidden'?'<span class="hn">隐藏</span>':'')
+      + '<div>'+s.name.replace('星野 · ','')+'</div>'
+      + '<div style="font-size:10px;opacity:.9">'+(n?('×'+n):'未收集')+'</div></div>';
+  }).join('');
+  var miss=S.styles.filter(function(s){ return !col[s.code]; })
+                   .map(function(s){ return s.name.replace('星野 · ',''); });
+  return '<div class="card"><h2>收藏图鉴</h2>'
+   + '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(96px,1fr))">'+grid+'</div>'
+   + '<div style="margin-top:16px">'
+   + '<div class="metric"><div class="n">'+got+' / '+total+'</div><div class="l">已收集款式</div></div></div>'
+   + (got>=total?('<div class="msg ok" style="margin-top:12px">已集齐全套（含隐藏款）</div>')
+      :('<div class="msg warn" style="margin-top:12px">还差 '+miss.length+' 款：'+miss.join('、')+'</div>'))
+   + '<p class="hint">未收集款式以灰色置灰呈现，不显示概率与款式细节——款式与概率公示见「玩法规则」。</p>'
+   + '</div>';
+}
+
+function c6(){
+  var cfg=S.cfg, tot=totalWeight(S);
+  var rows=S.styles.map(function(s){
+    var p=probOf(S,s.code)*100;
+    return '<tr><td>'+s.name+'</td><td>'+(s.tier==='hidden'?'隐藏款':'常规款')+'</td>'
+      + '<td>'+(s.tier==='hidden'?('1/'+cfg.hiddenDenom):('1/'+Math.round(cfg.hiddenDenom/12)))+'</td>'
+      + '<td>'+p.toFixed(3)+'%</td></tr>';
+  }).join('');
+  var fp=sha256(S.styles.map(function(s){return s.code+':'+s.name+':'+s.tier+':'+s.weight;}).join('|')+'|'+cfg.hiddenDenom+'|'+cfg.id);
+  return '<div class="card"><h2>玩法规则 · 商品与抽取概率公示</h2>'
+   + '<div class="rules" style="margin-bottom:14px">依据《盲盒经营行为规范指引（试行）》（国市监稽发〔2023〕39 号）第九条，公示下列要素：</div>'
+   + '<table><thead><tr><th>商品名称</th><th>种类</th><th>抽取概率</th><th>实际占比</th></tr></thead><tbody>'+rows+'</tbody></table>'
+   + '<div class="pbox" style="margin-top:14px">'
+   +   '<div class="pline"><span>商品种类</span><span>毛绒挂件盲盒（星野系列）</span></div>'
+   +   '<div class="pline"><span>商品分布</span><span>12 常规款 + 1 隐藏款，共 13 款</span></div>'
+   +   '<div class="pline"><span>限量投放数量</span><span>'+cfg.dropQty+' 盒</span></div>'
+   +   '<div class="pline"><span>商品价值范围</span><span>¥'+cfg.valueLow+' ~ ¥'+cfg.valueHigh+'</span></div>'
+   +   '<div class="pline"><span>抽取方式</span><span>付款后逐盒独立随机抽取</span></div>'
+   +   '<div class="pline"><span>未成年人条款</span><span>不向未满 8 周岁未成年人销售</span></div>'
+   + '</div>'
+   + '<div class="msg warn" style="margin-top:12px"><b>概率口径</b><br>'
+   + '本系列总量比为 <b>'+(cfg.hiddenDenom-1)+' : 1</b>（常规款合计 '+(cfg.hiddenDenom-1)+'/'+cfg.hiddenDenom
+   + '，隐藏款 1/'+cfg.hiddenDenom+'），常规款在合计份额内均分。</div>'
+   + '<h3>可验证性</h3>'
+   + '<div class="rules">本系统公示款式配置指纹，运营方在用户付款前后修改任一款式名称、档位或权重，指纹都会变化：</div>'
+   + '<code>'+fp+'</code>'
+   + '<div class="rules">概率与记录留存：本系统的抽取记录保留不少于 3 年（《指引》第十条）。本 Demo 为纯前端实现，数据仅存于浏览器本地，不具备真实留存能力——生产化需服务端存储。</div>'
+   + '</div>';
+}
+
+/* ================= B 端 ================= */
+function adminGate(){
+  return '<div class="card" style="max-width:420px;margin:40px auto"><h2>运营后台</h2>'
+   + '<label>访问口令</label><input id="code" type="password" placeholder="请输入口令">'
+   + '<button id="ok" class="btn primary block" style="margin-top:12px">进入</button>'
+   + '<p class="hint">口令提示：BB + 年份 + 破折号 + 开启</p>'
+   + (FB?'<div class="msg err">'+FB+'</div>':'')
+   + '</div>';
+}
+function bindGate(){
+  var g=function(x){ return document.getElementById(x); };
+  g('ok').onclick=function(){
+    if(g('code').value===ADMIN_CODE || g('code').value===ADMIN_KEY){ adminOk=true; FB=''; render(); }
+    else { FB='口令不正确'; render(); }
+  };
+}
+
+function b1(){
+  var o=S.orders, boxes=0, amt=0, col={};
+  o.forEach(function(x){ boxes+=x.qty; amt+=x.amount;
+    openedItems(ensureSlots(x)).forEach(function(i){ col[i.code]=(col[i.code]||0)+1; }); });
+  var got=Object.keys(col).length, hid=col['H1']||0;
+  var open=o.filter(function(x){return openedCount(x)>=x.qty;}).length;
+  var part=o.filter(function(x){var n=openedCount(x);return n>0&&n<x.qty;}).length;
+  var hidRate = boxes>0 ? (hid/boxes*100).toFixed(2) : '0.00';
+return '<div class="card"><h2>数据总览</h2><div class="grid">'
+   + '<div class="metric"><div class="n">'+o.length+'</div><div class="l">订单数</div></div>'
+   + '<div class="metric"><div class="n">'+boxes+'</div><div class="l">售出盒数</div></div>'
+   + '<div class="metric"><div class="n">¥'+amt+'</div><div class="l">总金额</div></div>'
+   + '<div class="metric"><div class="n">'+open+' / '+part+' / '+(o.length-open-part)+'</div><div class="l">已开 / 部分 / 未开</div></div>'
+   + '<div class="metric"><div class="n">'+got+' / '+S.styles.length+'</div><div class="l">款式开出数</div></div>'
+   + '<div class="metric"><div class="n">'+hid+'</div><div class="l">隐藏款开出</div></div>'
+   + '</div><p class="hint">隐藏款开出 '+hid+' / '+boxes+' 盒（'+hidRate+'%），'
+   + '公示概率 1/'+S.cfg.hiddenDenom+'（'+(100/S.cfg.hiddenDenom).toFixed(2)+'%）。样本量小时偏离属正常波动。</p>'
+   + audit()+'</div>';
+}
+
+/* 公示一致性自检：公示口径与实际权重必须对得上，否则属虚假公示 */
+function audit(){
+  var h=S.styles.filter(function(s){return s.tier==='hidden';})[0];
+  if(!h) return '<div class="msg err">公示一致性自检：当前无隐藏款，但公示口径声明为 1/'+S.cfg.hiddenDenom+'，两者不符。</div>';
+  var actual=h.weight/totalWeight(S)*100;
+  var claimed=100/S.cfg.hiddenDenom;
+  var dev=Math.abs(actual-claimed)/claimed*100;
+  if(dev>5){
+    return '<div class="msg err"><b>公示一致性自检 · 未通过</b><br>'
+      + '公示口径 1/'+S.cfg.hiddenDenom+'（'+claimed.toFixed(3)+'%），但按当前权重实际为 '+actual.toFixed(3)
+      + '%，偏差 '+dev.toFixed(1)+'%。<br>这在合规上等同于虚假公示——必须调整隐藏款权重至约 '
+      + Math.round(totalWeight(S)/S.cfg.hiddenDenom)+'，或把分母改回 '+Math.round(100/actual)+'。</div>';
+  }
+  return '<div class="msg ok"><b>公示一致性自检 · 通过</b>｜公示 1/'+S.cfg.hiddenDenom
+    +'（'+claimed.toFixed(3)+'%），实际 '+actual.toFixed(3)+'%，偏差 '+dev.toFixed(2)+'%。</div>';
+}
+
+var FLT={ q:'', from:'', to:'', status:'' };
+function b2(){
+  var flt=FLT;
+  var list=S.orders.filter(function(o){
+    if(flt.q && o.no.toLowerCase().indexOf(flt.q.toLowerCase())<0) return false;
+    if(flt.from && o.ts < new Date(flt.from+'T00:00:00').getTime()) return false;
+    if(flt.to && o.ts > new Date(flt.to+'T23:59:59').getTime()) return false;
+    if(flt.status==='full' && openedCount(o)<o.qty) return false;
+    if(flt.status==='part' && !(openedCount(o)>0&&openedCount(o)<o.qty)) return false;
+    if(flt.status==='none' && openedCount(o)>0) return false;
+    return true;
+  }).sort(function(a,b){ return b.ts-a.ts; });
+  var rows=list.map(function(o){
+    var st=orderStatusTxt(o);
+    var names=openedCount(o)?openedItems(o).map(function(x){return x.name.replace('星野 · ','');}).join('、'):'—';
+    return '<tr><td><b>'+o.no+'</b></td><td>'+fmt(o.ts)+'</td>'
+      + '<td><input data-f="qty" data-no="'+o.no+'" value="'+o.qty+'" style="width:64px;padding:4px 6px"></td>'
+      + '<td><input data-f="amount" data-no="'+o.no+'" value="'+o.amount+'" style="width:78px;padding:4px 6px"></td>'
+      + '<td>'+openedCount(o)+'/'+o.qty+'</td>'
+      + '<td><span class="pill '+st.c+'">'+st.t+'</span></td>'
+      + '<td style="max-width:200px"><span class="hint">'+names+'</span></td>'
+      + '<td><button class="btn sm" data-save="'+o.no+'">保存</button> '
+      + '<button class="btn sm" data-open="'+o.no+'">开盒</button> '
+      + '<button class="btn sm danger" data-del="'+o.no+'">删除</button></td></tr>';
+  }).join('');
+  return '<div class="card"><h2>订单管理（增 / 删 / 改 / 查）</h2>'
+   + '<div class="row">'
+   +   '<div style="flex:2"><label>订单号模糊查询</label><input id="fq" value="'+flt.q+'" placeholder="如 BB-20261003"></div>'
+   +   '<div><label>开始日期</label><input id="ff" type="date" value="'+flt.from+'"></div>'
+   +   '<div><label>结束日期</label><input id="ft" type="date" value="'+flt.to+'"></div>'
+   +   '<div><label>开盒状态</label><select id="fs"><option value="">全部</option>'
+   +     '<option value="none"'+(flt.status==='none'?' selected':'')+'>未开盒</option>'
+   +     '<option value="part"'+(flt.status==='part'?' selected':'')+'>部分开盒</option>'
+   +     '<option value="full"'+(flt.status==='full'?' selected':'')+'>已开完</option></select></div>'
+   +   '<div><label>&nbsp;</label><button id="doF" class="btn primary">筛选</button></div>'
+   + '</div>'
+   + '<div class="row" style="margin-top:4px">'
+   +   '<div><label>新增订单 · 数量</label><input id="nq" type="number" value="1" min="1" max="'+S.cfg.limitPerOrder+'"></div>'
+   +   '<div><label>新增订单 · 单价</label><input id="np" type="number" value="'+S.cfg.price+'"></div>'
+   +   '<div><label>&nbsp;</label><button id="doAdd" class="btn">新增订单</button></div>'
+   +   '<div><label>&nbsp;</label><button id="doClr" class="btn danger">清空全部订单</button></div>'
+   +   '<div><label>&nbsp;</label><button id="doExp" class="btn">导出当前结果</button></div>'
+   + '</div>'
+   + (FB?'<div class="msg ok">'+FB+'</div>':'')
+   + '<div class="scroll" style="margin-top:12px"><table><thead><tr><th>订单号</th><th>下单时间</th><th>盒数</th><th>金额</th><th>已开</th><th>状态</th><th>款式</th><th>操作</th></tr></thead><tbody>'
+   + rows+'</tbody></table></div>'
+   + '<p class="hint">共 '+list.length+' 条（筛选后）/ '+S.orders.length+' 条（全部）。「开盒」按钮为客服代客开盒；正常路径应由用户在 C 端自行开盒。</p>'
+   + '<textarea id="exp" style="display:none">'+EXPORT+'</textarea>'
+   + '</div>';
+}
+
+function b3(){
+  var tot=totalWeight(S), cfg=S.cfg;
+  var rows=S.styles.map(function(s){
+    var p=probOf(S,s.code)*100;
+    return '<tr><td>'+s.code+'</td>'
+      + '<td><input data-st="name" data-cd="'+s.code+'" value="'+s.name+'" style="width:130px;padding:4px 6px"></td>'
+      + '<td><select data-st="tier" data-cd="'+s.code+'" style="padding:4px 6px">'
+      + '<option value="normal"'+(s.tier==='normal'?' selected':'')+'>常规款</option>'
+      + '<option value="hidden"'+(s.tier==='hidden'?' selected':'')+'>隐藏款</option></select></td>'
+      + '<td><input data-st="weight" data-cd="'+s.code+'" type="number" value="'+s.weight+'" style="width:70px;padding:4px 6px"></td>'
+      + '<td>'+p.toFixed(3)+'%</td>'
+      + '<td>'+(s.tier==='hidden'?('1/'+cfg.hiddenDenom):'约 1/'+Math.round(cfg.hiddenDenom/12))+'</td>'
+      + '<td><button class="btn sm" data-stsave="'+s.code+'">保存</button> '
+      + '<button class="btn sm danger" data-stdel="'+s.code+'">删除</button></td></tr>';
+  }).join('');
+  var fp=sha256(S.styles.map(function(s){return s.code+':'+s.name+':'+s.tier+':'+s.weight;}).join('|')+'|'+cfg.hiddenDenom+'|'+cfg.id);
+  return '<div class="card"><h2>款式管理（增 / 删 / 改 / 查 + 概率配置）</h2>'
+   + '<div class="msg warn"><b>公示约束</b>：抽取概率属法定公示项。此处修改权重或档位后，公示页需同步更新，'
+   + '线上公示页有 <b>5 分钟缓存</b>；对外发送的公示截图与本表不一致即视为违规公示。建议每次改动留档。</div>'
+   + '<div class="row" style="margin-top:10px">'
+   +   '<div><label>隐藏款概率（1 / N）</label><input id="hd" type="number" value="'+cfg.hiddenDenom+'" min="2"></div>'
+   +   '<div><label>隐藏款权重</label><input id="hw" type="number" value="'+(S.styles.filter(function(s){return s.tier==='hidden';})[0]||{weight:12}).weight+'"></div>'
+   +   '<div><label>常规款权重（每款）</label><input id="nw" type="number" value="'+(S.styles.filter(function(s){return s.tier==='normal';})[0]||{weight:143}).weight+'"></div>'
+   +   '<div><label>&nbsp;</label><button id="doProb" class="btn primary">应用概率</button></div>'
+   + '</div>'
+   + '<div class="row" style="margin-top:4px">'
+   +   '<div><label>新增款式 · 名称</label><input id="nn" placeholder="如 星野 · 新芽"></div>'
+   +   '<div><label>新增款式 · 档位</label><select id="nt"><option value="normal">常规款</option><option value="hidden">隐藏款</option></select></div>'
+   +   '<div><label>新增款式 · 权重</label><input id="nw2" type="number" value="143"></div>'
+   +   '<div><label>&nbsp;</label><button id="doAddSt" class="btn">新增款式</button></div>'
+   + '</div>'
+   + (FB?'<div class="msg ok">'+FB+'</div>':'')
+   + '<div class="scroll" style="margin-top:12px"><table><thead><tr><th>编号</th><th>名称</th><th>档位</th><th>权重</th><th>实际占比</th><th>公示口径</th><th>操作</th></tr></thead><tbody>'
+   + rows+'</tbody></table></div>'
+   + '<h3>款式配置指纹（公示留痕）</h3><code>'+fp+'</code>'
+   + '<p class="hint">权重合计 '+tot+'。指纹随任一款式名称 / 档位 / 权重或隐藏款分母变化而变化，可用于比对公示是否被事后篡改。</p>'
+   + '<div class="pbox" style="margin-top:12px"><h3 style="margin-top:0">概率口径设计说明（仅运营侧可见）</h3>'
+   + '<div class="pline"><span>对外公示口径</span><span>总量比 '+(cfg.hiddenDenom-1)+' : 1，常规款在合计份额内均分</span></div>'
+   + '<div class="pline"><span>不可用的写法</span><span>「12 款各 1/12，再加隐藏款 1/144」</span></div>'
+   + '<div class="pline"><span>原因</span><span>12×1/12 = 100%，再加隐藏款后总和大于 100%，属公示口径自相矛盾</span></div>'
+   + '<div class="pline"><span>正确做法</span><span>常规款合计占 143/144，隐藏款占 1/144，常规款在 143 份内均分</span></div>'
+   + '<div class="pline"><span>投放量参考</span><span>当前 '+cfg.dropQty+' 盒，理论期望约 '+(cfg.dropQty/cfg.hiddenDenom).toFixed(1)+' 盒出一只隐藏款</span></div>'
+   + '<p class="hint" style="margin-top:8px">以上推导过程属内部设计说明，不对 C 端展示——C 端只呈现最终口径与实际占比，避免用户看到推导过程后产生"概率算错了"的误解。</p></div>'
+   + '<div class="row" style="margin-top:10px">'
+   +   '<div><label>系列名称</label><input id="cn" value="'+cfg.name+'"></div>'
+   +   '<div><label>单盒售价</label><input id="cp" type="number" value="'+cfg.price+'"></div>'
+   +   '<div><label>投放总量</label><input id="cd2" type="number" value="'+cfg.dropQty+'"></div>'
+   +   '<div><label>单次限购</label><input id="cl" type="number" value="'+cfg.limitPerOrder+'"></div>'
+   +   '<div><label>&nbsp;</label><button id="doCfg" class="btn">保存系列配置</button></div>'
+   + '</div>'
+   + '<button id="doReset" class="btn danger" style="margin-top:14px">恢复演示数据（清空订单与款式改动）</button>'
+   + '</div>';
+}
+
+function exportText(){
+  var L=[ '商品：'+S.cfg.name+' 盲盒', '订单数：'+S.orders.length, '' ];
+  L.push('订单号｜时间｜盒数｜金额｜已开｜款式');
+  S.orders.slice().sort(function(a,b){return b.ts-a.ts;}).forEach(function(o){
+    var oc=openedCount(o);
+    var n=oc?openedItems(o).map(function(x){return x.name;}).join('、'):'—';
+    L.push(o.no+' ｜ '+fmt(o.ts)+' ｜ '+o.qty+' ｜ ¥'+o.amount+' ｜ '+oc+'/'+o.qty+' ｜ '+n);
+  });
+  L.push('', '注：本导出用于客服核对与对账；款式价值与概率见公示页。');
+  return L.join('\n');
+}
+
+/* ================= 事件绑定 ================= */
+function bindUser(){
+  var g=function(x){ return document.getElementById(x); };
+  if(g('goPay')){
+    var mn=1, mx=S.cfg.limitPerOrder, cur=QTY();
+    if(cur<mn){ cur=mn; setQty(mn); }
+    if(cur>mx){ cur=mx; setQty(mx); }
+    g('qMinus').disabled = (cur<=mn);
+    g('qPlus').disabled  = (cur>=mx);
+    g('qMinus').onclick=function(){ if(cur>mn){ cur--; setQty(cur); render(); } };
+    g('qPlus').onclick =function(){ if(cur<mx){ cur++; setQty(cur); render(); } };
+    g('goPay').onclick=function(){ pg='c2'; render(); };
+    g('goRule').onclick=function(){ pg='c6'; render(); };
+    if(g('adm')){
+      g('adm').onclick=function(){
+        var v=prompt('请输入运营后台口令');
+        if(v===ADMIN_CODE||v===ADMIN_KEY){ adminOk=true; mode='admin'; pg='b1'; render(); }
+      };
+    }
+  }
+  if(g('back')) g('back').onclick=function(){ pg='c1'; render(); };
+  if(g('pay')) g('pay').onclick=function(){
+    var q=Math.min(S.cfg.limitPerOrder, Math.max(1,QTY()));
+    var no=nextNo();
+    S.orders.push({ no:no, ts:now(), qty:q, unitPrice:S.cfg.price, amount:S.cfg.price*q,
+                    status:'paid', items:[], opened:0 });
+    save(); pg='c3'; render();
+  };
+  if(g('go1')) g('go1').onclick=function(){ pg='c1'; render(); };
+  if(g('go4')) g('go4').onclick=function(){ pg='c4'; render(); };
+  if(g('go5')) g('go5').onclick=function(){ pg='c5'; render(); };
+  document.querySelectorAll('.bx[data-i]').forEach(function(b){
+    b.onclick=function(){
+      var o=lastOrder(); if(!o) return;
+      var i=parseInt(b.getAttribute('data-i'),10);
+      ensureSlots(o);
+      if(o.slots[i]) return;            /* 已开过，不重复也不覆盖 */
+      openSlot(S,o,i); save(); render();
+    };
+  });
+  document.querySelectorAll('[data-open]').forEach(function(b){
+    b.onclick=function(){
+      var no=b.getAttribute('data-open');
+      var o=S.orders.filter(function(x){return x.no===no;})[0];
+      if(!o) return;
+      ensureSlots(o);
+      for(var i=0;i<o.qty;i++) if(!o.slots[i]){ openSlot(S,o,i); break; }  /* 一次只开一盒 */
+      save(); pg='c3'; render();
+    };
+  });
+}
+
+function bindAdmin(){
+  var g=function(x){ return document.getElementById(x); };
+  if(!adminOk) return;
+
+  if(g('doF')){
+    g('doF').onclick=function(){
+      FLT.q=g('fq').value.trim(); FLT.from=g('ff').value; FLT.to=g('ft').value;
+      FLT.status=g('fs').value; FB=''; render();
+    };
+    g('doAdd').onclick=function(){
+      var q=Math.max(1,Math.min(S.cfg.limitPerOrder,parseInt(g('nq').value,10)||1));
+      var p=Math.max(0,parseInt(g('np').value,10)||S.cfg.price);
+      var no=nextNo();
+      S.orders.push({ no:no, ts:now(), qty:q, unitPrice:p, amount:p*q, status:'paid', items:[], opened:0 });
+      save(); FB='已新增订单 '+no+'（'+q+' 盒，¥'+(p*q)+'）'; render();
+    };
+    g('doClr').onclick=function(){
+      if(!confirm('清空全部 '+S.orders.length+' 条订单？\n款式配置会保留。')) return;
+      S.orders=[]; save(); FB='已清空全部订单'; render();
+    };
+    g('doExp').onclick=function(){
+      EXPORT=exportText();
+      FB='导出内容已生成于下方文本框，可直接复制';
+      render();
+      var t=document.getElementById('exp');
+      if(t){
+        t.style.display='block';
+        try{ t.focus(); t.select(); document.execCommand('copy'); FB='导出内容已生成并已复制到剪贴板'; render(); }
+        catch(e){}
+      }
+    };
+    document.querySelectorAll('[data-save]').forEach(function(b){
+      b.onclick=function(){
+        var no=b.getAttribute('data-save');
+        var o=S.orders.filter(function(x){return x.no===no;})[0]; if(!o) return;
+        document.querySelectorAll('[data-no="'+no+'"]').forEach(function(inp){
+          var f=inp.getAttribute('data-f');
+          if(f==='qty') o.qty=Math.max(1,parseInt(inp.value,10)||1);
+          if(f==='amount') o.amount=Math.max(0,parseFloat(inp.value,10)||0);
+        });
+        save(); FB='已保存 '+no; render();
+      };
+    });
+    document.querySelectorAll('[data-del]').forEach(function(b){
+      b.onclick=function(){
+        var no=b.getAttribute('data-del');
+        if(!confirm('删除订单 '+no+'？该操作不可撤销。')) return;
+        S.orders=S.orders.filter(function(x){return x.no!==no;});
+        save(); FB='已删除 '+no; render();
+      };
+    });
+    document.querySelectorAll('[data-open]').forEach(function(b){
+      b.onclick=function(){
+        var no=b.getAttribute('data-open');
+        var o=S.orders.filter(function(x){return x.no===no;})[0]; if(!o) return;
+        openAll(S,o);
+        save(); FB='订单 '+no+' 已全部开盒（客服代开）'; render();
+      };
+    });
+  }
+
+  if(g('doProb')){
+    g('doProb').onclick=function(){
+      var n=Math.max(2,parseInt(g('hd').value,10)||144);
+      var hw=Math.max(1,parseInt(g('hw').value,10)||12);
+      var nw=Math.max(1,parseInt(g('nw').value,10)||143);
+      /* 关键：分母是公示口径，权重才是真实概率来源。
+         这里把隐藏款权重按 1/n 反算回总权重，保证「公示 1/N」与实际抽取概率一致，
+         否则会出现公示写 1/200、实际抽出 0.52% 的虚假公示——这在合规上等于虚假宣传。 */
+      S.cfg.hiddenDenom=n;
+      S.styles.forEach(function(s){ s.weight = s.tier==='hidden'?hw:nw; });
+      var totNow=totalWeight(S), hidden=S.styles.filter(function(s){return s.tier==='hidden';})[0];
+      if(hidden){
+        var expect=Math.max(1,Math.round(totNow/n));
+        var actual=hidden.weight/totNow*100;
+        FB='概率已应用：公示口径 1/'+n+'，隐藏款实际占比 '+actual.toFixed(3)+'%'
+          + (Math.abs(actual* n - 100)>3 ? '。⚠ 权重与分母偏差过大，公示口径与实际不符，请调整权重' : '（与公示口径一致）');
+        if(Math.abs(actual*n-100)>3) FB+='：建议隐藏款权重设为 '+expect+'（常规款每款权重 '+Math.round(expect*(n-1)/12)+'）';
+      }else{
+        FB='概率已更新：常规款每款权重 '+nw+'。当前无隐藏款，请先在下方新增并把档位设为「隐藏款」。';
+      }
+      FB+=' 公示页缓存 5 分钟后生效。';
+      save(); render();
+    };
+    g('doAddSt').onclick=function(){
+      var nm=g('nn').value.trim();
+      if(!nm){ FB='请填写款式名称'; render(); return; }
+      if(S.styles.some(function(s){return s.name===nm;})){ FB='款式名称已存在'; render(); return; }
+      var tier=g('nt').value, w=Math.max(1,parseInt(g('nw2').value,10)||143);
+      S.styles.push({ code:'X'+hex(4).toUpperCase(), name:nm, tier:tier, weight:w,
+                      hue:Math.floor(Math.random()*360) });
+      save(); FB='已新增款式「'+nm+'」'; render();
+    };
+    g('doCfg').onclick=function(){
+      S.cfg.name=g('cn').value.trim()||S.cfg.name;
+      S.cfg.price=Math.max(0,parseInt(g('cp').value,10)||S.cfg.price);
+      S.cfg.dropQty=Math.max(1,parseInt(g('cd2').value,10)||S.cfg.dropQty);
+      S.cfg.limitPerOrder=Math.max(1,Math.min(12,parseInt(g('cl').value,10)||6));
+      save(); FB='系列配置已保存'; render();
+    };
+    g('doReset').onclick=function(){
+      if(!confirm('恢复演示数据？\n将清空全部订单并重置款式配置与概率。')) return;
+      S=firstRun(); save(); FLT={q:'',from:'',to:'',status:''}; FB='已恢复演示数据'; render();
+    };
+    document.querySelectorAll('[data-stsave]').forEach(function(b){
+      b.onclick=function(){
+        var cd=b.getAttribute('data-stsave');
+        var s=S.styles.filter(function(x){return x.code===cd;})[0]; if(!s) return;
+        document.querySelectorAll('[data-cd="'+cd+'"]').forEach(function(inp){
+          var f=inp.getAttribute('data-st');
+          if(f==='name'&&inp.value.trim()) s.name=inp.value.trim();
+          if(f==='tier') s.tier=inp.value;
+          if(f==='weight') s.weight=Math.max(1,parseInt(inp.value,10)||1);
+        });
+        save(); FB='款式 '+cd+' 已保存，公示指纹已更新'; render();
+      };
+    });
+    document.querySelectorAll('[data-stdel]').forEach(function(b){
+      b.onclick=function(){
+        var cd=b.getAttribute('data-stdel');
+        var s=S.styles.filter(function(x){return x.code===cd;})[0];
+        if(!confirm('删除款式「'+(s?s.name:cd)+'」？\n该款已有售出记录，删除后图鉴数据将无法对应。')) return;
+        S.styles=S.styles.filter(function(x){return x.code!==cd;});
+        save(); FB='已删除款式 '+cd; render();
+      };
+    });
+  }
+}
+
+document.getElementById('mUser').onclick=function(){ mode='user'; if(!adminOk) pg='c1'; render(); };
+document.getElementById('mAdmin').onclick=function(){ mode='admin'; pg='b1'; render(); };
+render();
+</script>
+</body>
+</html>
